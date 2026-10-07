@@ -1,9 +1,11 @@
-import dns from 'dns';
-dns.setServers(['8.8.8.8', '1.1.1.1']);
 import mongoose from 'mongoose';
 
 const connectDB = async (): Promise<void> => {
-  const mongoUri = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/ecommerce_db";
+  const mongoUri = process.env.MONGODB_URI;
+
+  if (!mongoUri) {
+    throw new Error('MONGODB_URI is not set. Add your MongoDB Atlas connection string to .env');
+  }
 
   try {
     await mongoose.connect(mongoUri);

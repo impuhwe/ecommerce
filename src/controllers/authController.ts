@@ -3,7 +3,7 @@ import User from "../models/User";
 import bcrypt from "bcrypt";
 import jwt, { SignOptions } from "jsonwebtoken";
 import { createHash, randomBytes } from "crypto";
-import { sendVerificationEmail, sendWelcomeEmail } from "../config/email";
+import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "../config/email";
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   const { name, email, password } = req.body;
@@ -110,6 +110,90 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
     $unset: { emailVerificationToken: 1, emailVerificationExpires: 1 },
   });
   res.status(200).json({ success: true, message: "Email verified successfully" });
+};
+
+export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+  const { email } = req.body;
+
+  if (typeof email !== "string" || !email.trim() || !email.includes("@")) {
+    res.status(400).json({ success: false, message: "A valid email is required" });
+    return;
+  }
+
+  try {
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+    if (user) {
+      const resetToken = randomBytes(32).toString("hex");
+      await User.updateOne({ _id: user._id }, {
+        $set: {
+          passwordResetToken: createHash("sha256").update(resetToken).digest("hex"),
+          passwordResetExpires: new Date(Date.now() + 60 * 60 * 1000),
+        },
+      });
+
+      const frontendUrl = (process.env.FRONTEND_URL || `${req.protocol}://${req.get("host")}`).replace(/\/$/, "");
+      const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
+      try {
+        await sendPasswordResetEmail(user.name, user.email, resetUrl);
+      } catch {
+        await User.updateOne({ _id: user._id }, {
+          $unset: { passwordResetToken: 1, passwordResetExpires: 1 },
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "If an account exists for that email, a password reset link has been sent.",
+    });
+  } catch {
+    res.status(500).json({ success: false, message: "Unable to process password reset request" });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+  const { token, password } = req.body;
+
+  if (typeof token !== "string" || !token || typeof password !== "string") {
+    res.status(400).json({ success: false, message: "Reset token and new password are required" });
+    return;
+  }
+
+  if (password.length < 6) {
+    res.status(400).json({ success: false, message: "Password must be at least 6 characters" });
+    return;
+  }
+
+  try {
+    const tokenHash = createHash("sha256").update(token).digest("hex");
+    const user = await User.findOne({ passwordResetToken: tokenHash })
+      .select("+passwordResetToken +passwordResetExpires");
+
+    if (!user || !user.passwordResetExpires || user.passwordResetExpires <= new Date()) {
+      res.status(400).json({ success: false, message: "Reset token is invalid or expired" });
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await User.updateOne({
+      _id: user._id,
+      passwordResetToken: tokenHash,
+      passwordResetExpires: { $gt: new Date() },
+    }, {
+      $set: { password: hashedPassword },
+      $unset: { passwordResetToken: 1, passwordResetExpires: 1 },
+    });
+
+    if (result.modifiedCount !== 1) {
+      res.status(400).json({ success: false, message: "Reset token is invalid or expired" });
+      return;
+    }
+
+    res.status(200).json({ success: true, message: "Password reset successfully" });
+  } catch {
+    res.status(500).json({ success: false, message: "Unable to reset password" });
+  }
 };
 
 export const login = async (req: Request, res: Response): Promise<void> => {

@@ -46,6 +46,19 @@ export const sendVerificationEmail = async (
   });
 };
 
+export const sendPasswordResetEmail = async (
+  name: string,
+  email: string,
+  resetUrl: string
+): Promise<void> => {
+  await transporter.sendMail({
+    from: process.env.SMTP_USER,
+    to: email,
+    subject: "Reset your password",
+    html: emailLayout(name, `<p>We received a request to reset your password.</p><p><a href="${escapeHtml(resetUrl)}" style="color:#315b50">Reset password</a></p><p>This link expires in one hour. If you did not request this, you can ignore this email.</p>`),
+  });
+};
+
 export const verifySmtpConnection = (): Promise<boolean> => transporter.verify();
 
 export default transporter;

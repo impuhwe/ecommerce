@@ -3,6 +3,8 @@ import {
   register,
   login,
   verifyEmail,
+  forgotPassword,
+  resetPassword,
 } from "../controllers/authController";
 
 const router = Router();
@@ -52,6 +54,49 @@ router.post("/register", register);
  *       401: { description: Invalid credentials }
  */
 router.post("/login", login);
+
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Send a password reset link
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email: { type: string, format: email }
+ *     responses:
+ *       200: { description: Reset instructions sent if the account exists }
+ *       400: { description: Invalid email }
+ */
+router.post("/forgot-password", forgotPassword);
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Set a new password using a reset token
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token, password]
+ *             properties:
+ *               token: { type: string }
+ *               password: { type: string, format: password, minLength: 6 }
+ *     responses:
+ *       200: { description: Password reset }
+ *       400: { description: Invalid request or expired token }
+ */
+router.post("/reset-password", resetPassword);
 
 /**
  * @swagger

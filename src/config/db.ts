@@ -1,17 +1,13 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
+import { env } from "./env";
+import { logError } from "../utils/logError";
 
 const connectDB = async (): Promise<void> => {
-  const mongoUri = process.env.MONGODB_URI;
-
-  if (!mongoUri) {
-    throw new Error('MONGODB_URI is not set. Add your MongoDB Atlas connection string to .env');
-  }
-
   try {
-    await mongoose.connect(mongoUri);
+    await mongoose.connect(env.MONGO_URI);
     console.log("MongoDB connected successfully");
   } catch (error) {
-    console.error("MongoDB connection failed:", error);
+    logError("mongodb", error);
     process.exit(1);
   }
 };

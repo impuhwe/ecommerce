@@ -1,4 +1,4 @@
-import express, { Application, Request, Response,NextFunction } from "express";
+import express, { Application, Request, Response, NextFunction } from "express";
 import swaggerJsdoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 
@@ -20,6 +20,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use(cors());
 
 // Swagger configuration
 const swaggerOptions = {

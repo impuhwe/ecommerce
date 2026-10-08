@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router } from "express";
 import {
   register,
   login,
@@ -6,6 +6,13 @@ import {
   forgotPassword,
   resetPassword,
 } from "../controllers/authController";
+import { validate } from "../middleware/validate";
+import {
+  forgotPasswordEmailLimiter,
+  forgotPasswordIpLimiter,
+  resetPasswordIpLimiter,
+} from "../middleware/rateLimiters";
+import { forgotPasswordSchema, resetPasswordSchema } from "../validators/authValidators";
 
 const router = Router();
 
@@ -56,11 +63,12 @@ router.post("/register", register);
 router.post("/login", login);
 
 /**
- * @swagger
+ * @openapi
  * /api/auth/forgot-password:
  *   post:
  *     tags: [Authentication]
- *     summary: Send a password reset link
+ *     summary: Request a password reset OTP
+ *     security: []
  *     requestBody:
  *       required: true
  *       content:
@@ -69,34 +77,105 @@ router.post("/login", login);
  *             type: object
  *             required: [email]
  *             properties:
- *               email: { type: string, format: email }
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: alex@example.com
+ *           example:
+ *             email: alex@example.com
  *     responses:
- *       200: { description: Reset instructions sent if the account exists }
- *       400: { description: Invalid email }
+ *       200:
+ *         description: Generic success whether or not the account exists
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               message: If an account exists, a code has been sent
+ *       400:
+ *         description: Invalid request body
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               message: Invalid request body
+ *               errors:
+ *                 - field: email
+ *                   message: Invalid email
+ *       429:
+ *         description: Too many requests
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               message: Too many requests, please try again later
  */
-router.post("/forgot-password", forgotPassword);
+router.post(
+  "/forgot-password",
+  forgotPasswordIpLimiter,
+  validate(forgotPasswordSchema),
+  forgotPasswordEmailLimiter,
+  forgotPassword
+);
 
 /**
- * @swagger
+ * @openapi
  * /api/auth/reset-password:
  *   post:
  *     tags: [Authentication]
- *     summary: Set a new password using a reset token
+ *     summary: Reset password using an emailed OTP
+ *     security: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [token, password]
+ *             required: [email, otp, newPassword]
  *             properties:
- *               token: { type: string }
- *               password: { type: string, format: password, minLength: 6 }
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: alex@example.com
+ *               otp:
+ *                 type: string
+ *                 example: "123456"
+ *               newPassword:
+ *                 type: string
+ *                 format: password
+ *                 example: NewPass123
+ *           example:
+ *             email: alex@example.com
+ *             otp: "123456"
+ *             newPassword: NewPass123
  *     responses:
- *       200: { description: Password reset }
- *       400: { description: Invalid request or expired token }
+ *       200:
+ *         description: Password updated
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               message: Password reset successfully
+ *       400:
+ *         description: Invalid or expired code, or invalid body
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               message: Invalid or expired code
+ *       429:
+ *         description: Too many requests
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               message: Too many requests, please try again later
  */
-router.post("/reset-password", resetPassword);
+router.post(
+  "/reset-password",
+  resetPasswordIpLimiter,
+  validate(resetPasswordSchema),
+  resetPassword
+);
 
 /**
  * @swagger

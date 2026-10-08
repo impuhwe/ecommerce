@@ -1,6 +1,6 @@
-import jwt from "jsonwebtoken";
-import { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction } from "express";
 import User from "../models/User";
+import { verifyAccessToken } from "../utils/jwt";
 
 declare global {
   namespace Express {
@@ -18,11 +18,11 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-export const authMiddleware = (
+export const authMiddleware = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
-): void => {
+): Promise<void> => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -44,23 +44,24 @@ export const authMiddleware = (
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
+    const decoded = verifyAccessToken(token);
+    const user = await User.findById(decoded.id).select("tokenVersion role");
 
-    if (typeof decoded === "string" || !decoded.id || !decoded.role) {
+    if (!user || (user.tokenVersion ?? 0) !== decoded.tokenVersion) {
       res.status(401).json({
         success: false,
-        message: "Invalid token payload",
+        message: "Invalid or expired token",
       });
       return;
     }
 
     req.user = {
-      id: decoded.id as string,
-      role: decoded.role as "admin" | "user",
+      id: decoded.id,
+      role: decoded.role,
     };
 
     next();
-  } catch (error) {
+  } catch {
     res.status(401).json({
       success: false,
       message: "Invalid or expired token",

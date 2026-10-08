@@ -65,6 +65,13 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       sendVerificationEmail(user.name, user.email, verificationUrl),
     ]);
 
+    emailResults.forEach((result, index) => {
+      if (result.status === "rejected") {
+        const label = index === 0 ? "welcome" : "verification";
+        console.error(`Failed to send ${label} email:`, result.reason);
+      }
+    });
+
     res.status(201).json({
       success: true,
       message: "User registered successfully. Please verify your email.",

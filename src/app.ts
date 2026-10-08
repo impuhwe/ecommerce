@@ -1,11 +1,23 @@
-import express, { Application, Request, Response } from "express";
+import express, { Application, Request, Response,NextFunction } from "express";
 import swaggerJsdoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 
 import authRoutes from "./routes/authRoutes";
 import productRoutes from "./routes/productRoutes";
+import cors from "cors";
 
 const app: Application = express();
+
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5000",
+      "https://ecommerce-lojy.onrender.com",
+    ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 app.use(express.json());
 
@@ -51,7 +63,7 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 // Error handling middleware
-app.use((err: Error, req: Request, res: Response): void => {
+app.use((err: Error, req: Request, res: Response, next: NextFunction): void => {
   console.error(err.stack);
   res.status(500).json({
     success: false,

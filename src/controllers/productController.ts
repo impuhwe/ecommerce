@@ -6,9 +6,9 @@ export const createProduct = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
-  const { name, description, price, quantity } = req.body;
+  const { name, category, price, quantity } = req.body;
 
-  if (!name || !description || price === undefined || quantity === undefined) {
+  if (!name || !category || price === undefined || quantity === undefined) {
     res.status(400).json({
       success: false,
       message: "All fields are required",
@@ -35,7 +35,7 @@ export const createProduct = async (
   try {
     const product = new Product({
       name: name.trim(),
-      description: description.trim(),
+      category: category.trim(),
       price,
       quantity,
       image: req.body.image,
@@ -124,14 +124,14 @@ export const updateProduct = async (
     return;
   }
 
-  const { name, description, price, quantity } = req.body;
+  const { name, category, price, quantity } = req.body;
 
   try {
     const product = await Product.findByIdAndUpdate(
       id,
       {
         name: name?.trim(),
-        description: description?.trim(),
+        category: category?.trim(),
         price,
         quantity,
         image: req.body.image,

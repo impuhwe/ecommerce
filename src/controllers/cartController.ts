@@ -55,7 +55,7 @@ const getCartItems = async (cart: ICart): Promise<CartResponseItem[] | null> => 
         description: product.description,
         category: product.category,
         price: product.price,
-        image: product.image,
+        ...(product.image === undefined ? {} : { image: product.image }),
         options: product.options,
       },
       option: item.option,
@@ -95,7 +95,7 @@ export const getMyCart = async (
       });
       return;
     }
-    res.status(200).json({ success: true, cart: { id: cart.id, items } });
+    res.status(200).json({ success: true, cart: { id: cart._id.toString(), items } });
   } catch (error) {
     console.error("Failed to fetch cart:", error);
     res.status(500).json({ success: false, message: "Server error while fetching cart" });
@@ -145,7 +145,7 @@ export const addCartItem = async (
       });
       return;
     }
-    res.status(201).json({ success: true, cart: { id: cart.id, items } });
+    res.status(201).json({ success: true, cart: { id: cart._id.toString(), items } });
   } catch (error) {
     console.error("Failed to add cart item:", error);
     res.status(500).json({ success: false, message: "Server error while updating cart" });
@@ -158,7 +158,7 @@ export const updateCartItem = async (
 ): Promise<void> => {
   const userId = getCustomerId(req, res);
   if (!userId) return;
-  const itemId = req.params.id;
+  const itemId = req.params.id as string;
   if (!itemId || !/^[0-9a-fA-F]{24}$/.test(itemId)) {
     res.status(400).json({ success: false, message: "Invalid cart item ID" });
     return;
@@ -182,7 +182,7 @@ export const updateCartItem = async (
       });
       return;
     }
-    res.status(200).json({ success: true, cart: { id: cart.id, items } });
+    res.status(200).json({ success: true, cart: { id: cart._id.toString(), items } });
   } catch (error) {
     console.error("Failed to update cart item:", error);
     res.status(500).json({ success: false, message: "Server error while updating cart" });
@@ -195,7 +195,7 @@ export const removeCartItem = async (
 ): Promise<void> => {
   const userId = getCustomerId(req, res);
   if (!userId) return;
-  const itemId = req.params.id;
+  const itemId = req.params.id as string;
   if (!itemId || !/^[0-9a-fA-F]{24}$/.test(itemId)) {
     res.status(400).json({ success: false, message: "Invalid cart item ID" });
     return;
@@ -220,7 +220,7 @@ export const removeCartItem = async (
       });
       return;
     }
-    res.status(200).json({ success: true, cart: { id: cart.id, items } });
+    res.status(200).json({ success: true, cart: { id: cart._id.toString(), items } });
   } catch (error) {
     console.error("Failed to remove cart item:", error);
     res.status(500).json({ success: false, message: "Server error while updating cart" });

@@ -1,6 +1,6 @@
 import type { Response } from "express";
 import mongoose from "mongoose";
-import Cart from "../models/Cart";
+import Cart, { type ICartItem } from "../models/Cart";
 import Order, { type IOrder, type IOrderItem } from "../models/Order";
 import Product from "../models/Product";
 import type { AuthenticatedRequest } from "../middleware/authMiddleware";
@@ -29,7 +29,7 @@ export const createOrder = async (
   const userId = getCustomerId(req, res);
   if (!userId) return;
   const delivery = req.body as CreateOrderBody;
-  let session: mongoose.ClientSession | undefined;
+  let session: mongoose.ClientSession | null = null;
 
   try {
     session = await mongoose.startSession();
@@ -37,7 +37,14 @@ export const createOrder = async (
     await session.withTransaction(async () => {
       let cart = await Cart.findOne({ userId }).session(session);
       if (!cart) {
-        [cart] = await Cart.create([{ userId, items: [] }], { session });
+        const [createdCart] = await Cart.create(
+          [{ userId, items: [] as ICartItem[] }],
+          { session }
+        );
+        if (!createdCart) {
+          throw new Error("Cart creation completed without a cart");
+        }
+        cart = createdCart;
       }
       if (!cart || cart.items.length === 0) {
         throw new Error("CART_EMPTY");
@@ -81,6 +88,9 @@ export const createOrder = async (
         ],
         { session }
       );
+      if (!order) {
+        throw new Error("Order creation completed without an order");
+      }
       cart.items.splice(0, cart.items.length);
       await cart.save({ session });
       createdOrder = order;
@@ -154,7 +164,7 @@ export const getOrderById = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
-  const id = req.params.id;
+  const id = req.params.id as string;
   if (!id || !/^[0-9a-fA-F]{24}$/.test(id)) {
     res.status(400).json({ success: false, message: "Invalid order ID" });
     return;
@@ -176,7 +186,7 @@ export const updateOrderStatus = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
-  const id = req.params.id;
+  const id = req.params.id as string;
   if (!id || !/^[0-9a-fA-F]{24}$/.test(id)) {
     res.status(400).json({ success: false, message: "Invalid order ID" });
     return;

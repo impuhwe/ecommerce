@@ -15,3 +15,18 @@ export const adminOnly = (
   }
   next();
 };
+
+export const customerOnly = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (!req.user || req.user.role !== "user") {
+    res.status(403).json({
+      success: false,
+      message: "Customer only",
+    });
+    return;
+  }
+  next();
+};

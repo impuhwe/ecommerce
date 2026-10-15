@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import User from "../models/User";
+import Cart from "../models/Cart";
 import bcrypt from "bcrypt";
 import { createHash, randomBytes } from "crypto";
 import { sendVerificationEmail, sendWelcomeEmail } from "../config/email";
@@ -64,6 +65,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     });
 
     await user.save();
+    try {
+      await Cart.create({ userId: user._id, items: [] });
+    } catch (error) {
+      await User.deleteOne({ _id: user._id });
+      throw error;
+    }
 
     const verificationUrl = `${req.protocol}://${req.get("host")}/api/auth/verify-email?token=${verificationToken}`;
     const emailResults = await Promise.allSettled([
@@ -81,6 +88,11 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     res.status(201).json({
       success: true,
       message: "User registered successfully. Please verify your email.",
+      token: signAccessToken({
+        id: user.id,
+        role: user.role,
+        tokenVersion: user.tokenVersion ?? 0,
+      }),
       welcomeEmailSent: emailResults[0].status === "fulfilled",
       verificationEmailSent: emailResults[1].status === "fulfilled",
       user: {
@@ -91,6 +103,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       },
     });
   } catch (error) {
+    console.error("Server error during registration:", error);
     res.status(500).json({
       success: false,
       message: "Server error during registration",

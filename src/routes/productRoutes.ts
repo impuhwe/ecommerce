@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router } from "express";
 import {
   createProduct,
   getProducts,
@@ -8,23 +8,28 @@ import {
 } from "../controllers/productController";
 import { authMiddleware } from "../middleware/authMiddleware";
 import { adminOnly } from "../middleware/roleMiddleware";
+import { upload } from "../middleware/uploadMiddleware";
 
 const router = Router();
 
-// Public/authenticated routes - users can view products
+// Product catalog is public; only mutations require authentication.
 /**
  * @swagger
  * /api/products:
  *   get:
  *     tags: [Products]
  *     summary: List products
- *     security:
- *       - bearerAuth: []
+ *     security: []
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         required: false
+ *         schema: { type: string }
  *     responses:
  *       200: { description: Products returned }
  *       401: { description: Missing or invalid token }
  */
-router.get("/", authMiddleware, getProducts);
+router.get("/", getProducts);
 
 /**
  * @swagger
@@ -32,8 +37,7 @@ router.get("/", authMiddleware, getProducts);
  *   get:
  *     tags: [Products]
  *     summary: Get a product by ID
- *     security:
- *       - bearerAuth: []
+ *     security: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -44,7 +48,7 @@ router.get("/", authMiddleware, getProducts);
  *       400: { description: Invalid product ID }
  *       404: { description: Product not found }
  */
-router.get("/:id", authMiddleware, getProductById);
+router.get("/:id", getProductById);
 
 // Protected routes - admin only
 /**
@@ -61,19 +65,21 @@ router.get("/:id", authMiddleware, getProductById);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name, description, price, quantity]
+ *             required: [name, description, category, price]
  *             properties:
  *               name: { type: string, example: Notebook }
  *               description: { type: string, example: Hardcover notebook }
  *               price: { type: number, minimum: 0, example: 12.5 }
+ *               category: { type: string, example: Food }
  *               quantity: { type: integer, minimum: 0, example: 25 }
  *               image: { type: string, example: https://example.com/notebook.jpg }
+ *               options: { type: array, items: { type: string }, example: [Small, Large] }
  *     responses:
  *       201: { description: Product created }
  *       401: { description: Missing or invalid token }
  *       403: { description: Admin only }
  */
-router.post("/", authMiddleware, adminOnly, createProduct);
+router.post("/", authMiddleware, adminOnly, upload.single("image"), createProduct);
 
 /**
  * @swagger
@@ -97,16 +103,18 @@ router.post("/", authMiddleware, adminOnly, createProduct);
  *             properties:
  *               name: { type: string }
  *               description: { type: string }
+ *               category: { type: string }
  *               price: { type: number, minimum: 0 }
  *               quantity: { type: integer, minimum: 0 }
  *               image: { type: string }
+ *               options: { type: array, items: { type: string } }
  *     responses:
  *       200: { description: Product updated }
  *       400: { description: Invalid product ID }
  *       403: { description: Admin only }
  *       404: { description: Product not found }
  */
-router.put("/:id", authMiddleware, adminOnly, updateProduct);
+router.put("/:id", authMiddleware, adminOnly, upload.single("image"), updateProduct);
 
 /**
  * @swagger

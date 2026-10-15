@@ -1,26 +1,27 @@
 import express, { Application, Request, Response, NextFunction } from "express";
+import multer from "multer";
 import swaggerJsdoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 
 import authRoutes from "./routes/authRoutes";
 import productRoutes from "./routes/productRoutes";
+import cartRoutes from "./routes/cartRoutes";
+import orderRoutes from "./routes/orderRoutes";
 import cors from "cors";
+import { env } from "./config/env";
+import "./config/cloudinary";
 
 const app: Application = express();
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:5000",
-      "https://ecommerce-lojy.onrender.com",
-    ],
+    origin: [...new Set([...env.CORS_ORIGINS, "http://localhost:8443"])],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
 app.use(express.json());
-app.use(cors());
 
 // Swagger configuration
 const swaggerOptions = {
@@ -57,6 +58,8 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/cart", cartRoutes);
+app.use("/api/orders", orderRoutes);
 
 // Health check
 app.get("/", (req: Request, res: Response) => {
@@ -65,7 +68,22 @@ app.get("/", (req: Request, res: Response) => {
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction): void => {
-  console.error(err.stack);
+  if (err instanceof multer.MulterError) {
+    const message =
+      err.code === "LIMIT_FILE_SIZE"
+        ? "Image must be 5 MB or smaller."
+        : err.code === "LIMIT_UNEXPECTED_FILE"
+          ? "Only JPEG, PNG, and WebP images are allowed."
+          : "Image upload failed.";
+
+    res.status(400).json({
+      success: false,
+      message,
+    });
+    return;
+  }
+
+  console.error(err.stack ?? err.message);
   res.status(500).json({
     success: false,
     message: "Internal server error",

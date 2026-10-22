@@ -62,17 +62,20 @@ router.get("/:id", getProductById);
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
- *             required: [name, description, category, price]
+ *             required: [name, description, category, price, image]
  *             properties:
  *               name: { type: string, example: Notebook }
  *               description: { type: string, example: Hardcover notebook }
  *               price: { type: number, minimum: 0, example: 12.5 }
  *               category: { type: string, example: Food }
  *               quantity: { type: integer, minimum: 0, example: 25 }
- *               image: { type: string, example: https://example.com/notebook.jpg }
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: JPEG, PNG, or WebP image, up to 5 MB
  *               options: { type: array, items: { type: string }, example: [Small, Large] }
  *     responses:
  *       201: { description: Product created }
@@ -97,7 +100,7 @@ router.post("/", authMiddleware, adminOnly, upload.single("image"), createProduc
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
@@ -106,7 +109,10 @@ router.post("/", authMiddleware, adminOnly, upload.single("image"), createProduc
  *               category: { type: string }
  *               price: { type: number, minimum: 0 }
  *               quantity: { type: integer, minimum: 0 }
- *               image: { type: string }
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: JPEG, PNG, or WebP image, up to 5 MB
  *               options: { type: array, items: { type: string } }
  *     responses:
  *       200: { description: Product updated }

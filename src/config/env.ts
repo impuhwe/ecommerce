@@ -15,7 +15,7 @@ const envSchema = z.object({
     .transform((value) =>
       value
         .split(",")
-        .map((origin) => origin.trim())
+        .map((origin) => origin.trim().replace(/\/+$/, ""))
         .filter((origin) => origin.length > 0)
     )
     .pipe(z.array(z.string()).min(1)),

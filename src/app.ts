@@ -15,7 +15,7 @@ const app: Application = express();
 
 app.use(
   cors({
-    origin: [...new Set([...env.CORS_ORIGINS, "http://localhost:5173"])],
+    origin: [...new Set([...env.CORS_ORIGINS, "http://localhost:5173/"])],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
